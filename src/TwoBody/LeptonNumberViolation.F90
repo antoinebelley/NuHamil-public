@@ -508,4 +508,49 @@ contains
     gp = -(2.d0 * m_nucleon * ga_func(q) ) / ( q**2 + m_pi**2 )
   end function gp_func
 
+  function neutrino_pot_GT_AA(q) result(hgt_AA)
+    use MyLibrary, only: g_A, m_nucleon
+    real(8), intent(in) :: q
+    real(8) :: hgt_AA
+    hgt_AP = 1.d0
+    if(this%ch_order<2) return
+    hgt_AA = ga_func(q)**2
+    hgt_AA = hgt_AA / g_A**2
+    if(this%ch_order>3) write(*,*) "Higher order is not implemented yet"
+  end function neutrino_pot_GT_AA
+
+  function neutrino_pot_GT_AP(q) result(hgt_AP)
+    use MyLibrary, only: g_A, m_nucleon
+    real(8), intent(in) :: q
+    real(8) :: hgt_AP
+    hgt_AP = 0
+    if(this%ch_order<2) return
+    hgt_AP = ga_func(q) * gp_func(q) * q**2 / (3.d0 * m_nucleon)
+    hgt_AP = hgt_AP / g_A**2
+    if(this%ch_order>3) write(*,*) "Higher order is not implemented yet"
+  end function neutrino_pot_GT_AP
+
+  function neutrino_pot_GT_PP(q) result(hgt_PP)
+    use MyLibrary, only: g_A, m_nucleon
+    real(8), intent(in) :: q
+    real(8) :: hgt_PP
+    hgt_PP = 0
+    if(this%ch_order<2) return
+    hgt_PP = gp_func(q)**2 * q**4 / (12.d0 * m_nucleon**2)
+    hgt_PP = hgt_PP / g_A**2
+    if(this%ch_order>3) write(*,*) "Higher order is not implemented yet"
+  end function neutrino_pot_GT_PP
+
+  function neutrino_pot_GT_MM(q) result(hgt_MM)
+    use MyLibrary, only: g_A, m_nucleon
+    real(8), intent(in) :: q
+    real(8) :: hgt_MM
+    hgt_PP = 0
+    if(this%ch_order<2) return
+    hgt_MM = gm_func(q)**2 * q**2 / (6.d0 * m_nucleon**2)
+    hgt_MM = hgt_MM / g_A**2
+    if(this%ch_order>3) write(*,*) "Higher order is not implemented yet"
+  end function neutrino_pot_GT_MM
+
+
 end module LeptonNumberViolation
