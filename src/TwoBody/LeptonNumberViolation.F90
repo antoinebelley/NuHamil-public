@@ -52,6 +52,7 @@ module LeptonNumberViolation
     real(8) :: Ec = 0.d0
     integer :: ch_order = 0
     character(:), allocatable :: OpName
+    character(:), allocatable :: OpRange
     character(:), allocatable :: NNint
     real(8) :: c1, c2, c3, c4, gvv
   contains
@@ -69,14 +70,24 @@ module LeptonNumberViolation
     real(8), allocatable :: QMesh(:)
   end type MomFunctions
   character(32), private, parameter :: name_0vbb_f ="0vbbFermi"
+  character(32), private, parameter :: name_0vbb_f_VV ="0vbbFermiVV"
   character(32), private, parameter :: name_0vbb_gt="0vbbGamowTeller"
+  character(32), private, parameter :: name_0vbb_gt_AA="0vbbGamowTellerAA"
+  character(32), private, parameter :: name_0vbb_gt_AP="0vbbGamowTellerAP"
+  character(32), private, parameter :: name_0vbb_gt_PP="0vbbGamowTellerPP"
+  character(32), private, parameter :: name_0vbb_gt_MM="0vbbGamowTellerMM"
   character(32), private, parameter :: name_0vbb_t ="0vbbTensor"
+  character(32), private, parameter :: name_0vbb_t_AP ="0vbbTensorAP"
+  character(32), private, parameter :: name_0vbb_t_PP ="0vbbTensorPP"
+  character(32), private, parameter :: name_0vbb_t_MM ="0vbbTensorMM"
   character(32), private, parameter :: name_0vbb_ct="0vbbContact"
   character(32), private, parameter :: name_0veeC_f="0veeCapGamowFermi"
   character(32), private, parameter :: name_0veeC_gt0="0veeCapGamowTeller0"
   character(32), private, parameter :: name_0veeC_gt1="0veeCapGamowTeller1"
   character(32), private, parameter :: name_0veeC_gt2="0veeCapGamowTeller2"
   character(32), private, parameter :: name_0veeC_t="0veeCapTensor0"
+  character(32), private, parameter :: long_range="LR"
+  character(32), private, parameter :: short_range="SR"
   type(CGsStore), private :: cg_store
 
 contains
@@ -86,6 +97,7 @@ contains
     write(*,"(a)") "# Calculation options for Lepton-number violation operator"
     write(*,"(2a)") "# Operator: ", trim(this%OpName)
     write(*,"(a,f10.4,a)") "# Closure Energy: ", this%Ec, " MeV"
+    write(*,"(2a)") "# Operator Range: ", this%OpRange
     write(*,"(a,i3)") "# Order of chiral expansion: ", this%ch_order
     write(*,"(a,f8.4,a,f8.4,a,f8.4,a,f8.4,a)") "# c1= ", this%c1, " GeV-1, c2= ", &
         & this%c2, " GeV-1, c3=", this%c3, " GeV-1, c4= ", this%c4, " GeV-1"
@@ -108,18 +120,23 @@ contains
     call this%fin_pwd()
   end subroutine FinLNViolation
 
-  subroutine InitLNViolation(this, OpName, NNint, Rank, Ec, ch_order, Jmax, Regulator, RegulatorPower, RegulatorLambda)
-    use MyLibrary, only: pi, hc, m_nucleon, g_A, f_pi
+  subroutine InitLNViolation(this, OpName, NNint, OpRange, Rank, Ec, ch_order, Jmax, Regulator, RegulatorPower, RegulatorLambda)
+    use MyLibrary, only: pi, hc, m_nucleon, g_A, f_pi, m_proton, m_e
     class(LNViolation), intent(inout) :: this
-    character(*), intent(in) :: OpName, NNint
+    character(*), intent(in) :: OpName,  NNint
     real(8), intent(in), optional :: Ec, RegulatorLambda
     integer, intent(in), optional :: ch_order, Jmax, RegulatorPower, Rank
     real(8) :: gvv
-    character(*), intent(in), optional :: Regulator
+    character(*), intent(in), optional :: Regulator, OpRange
     this%OpName = OpName
     this%NNint = NNint
+    if(present(OpRange)) then
+       this%OpRange = OpRange
+    else
+      this%OpRange = "LR"
+    end if
 
-    call this%init_pwd(Jmax=Jmax, Rank=Rank, Regulator=Regulator, &
+    call this%init_pwd(NMesh=100, Jmax=Jmax, Rank=Rank, Regulator=Regulator, &
         & RegulatorPower=RegulatorPower, RegulatorLambda=RegulatorLambda)
     if( present(Ec) ) this%Ec = Ec
     if( present(ch_order) ) this%ch_order = ch_order
@@ -231,7 +248,6 @@ contains
       call set_helicity_rep_isospin(this, fq, pbra, pket, zbra, zket)
       r = this%do_pwd(fq%op, pbra, lbra, sbra, jbra, pket, lket, sket, jket)
     end if
-
     deallocate(fq%op)
     deallocate(fq%QMesh)
     deallocate(z1bras, z2bras, z1kets, z2kets)
@@ -253,11 +269,14 @@ contains
     if(z1bra == z1ket) return
     t_factor = 2.d0
     select case(this%OpName)
-    case(name_0vbb_f, name_0veeC_f)
+    case(name_0vbb_f, name_0veeC_f, name_0vbb_f_VV)
       call set_helicity_rep_0vbb_fermi(this, fq, pbra, pket)
-    case(name_0vbb_gt, name_0veeC_gt0, name_0veeC_gt1, name_0veeC_gt2)
+    case(name_0vbb_gt, name_0vbb_gt_AA, name_0vbb_gt_AP,&
+        &name_0vbb_gt_PP, name_0vbb_gt_MM, name_0veeC_gt0,& 
+        &name_0veeC_gt1, name_0veeC_gt2)
       call set_helicity_rep_0vbb_gt(this, fq, pbra, pket)
-    case(name_0vbb_t, name_0veeC_t)
+    case(name_0vbb_t, name_0vbb_t_AP, name_0vbb_t_PP,&
+        &name_0vbb_t_MM, name_0veeC_t)
       call set_helicity_rep_0vbb_tensor(this, fq, pbra, pket)
     case(name_0vbb_ct)
       call set_helicity_rep_0vbb_contact(this, fq, pbra, pket)
@@ -282,11 +301,14 @@ contains
     if(tbra /= 1 .or. tket /= 1) return
     t_factor = 2.d0 * sqrt(5.d0)
     select case(this%OpName)
-    case(name_0vbb_f, name_0veeC_f)
+    case(name_0vbb_f, name_0veeC_f, name_0vbb_f_VV)
       call set_helicity_rep_0vbb_fermi(this, fq, pbra, pket)
-    case(name_0vbb_gt, name_0veeC_gt0, name_0veeC_gt1, name_0veeC_gt2)
+    case(name_0vbb_gt, name_0vbb_gt_AA, name_0vbb_gt_AP,&
+        &name_0vbb_gt_PP, name_0vbb_gt_MM, name_0veeC_gt0,&
+        name_0veeC_gt1, name_0veeC_gt2)
       call set_helicity_rep_0vbb_gt(this, fq, pbra, pket)
-    case(name_0vbb_t, name_0veeC_t)
+    case(name_0vbb_t, name_0vbb_t_AP, name_0vbb_t_PP,&
+        name_0vbb_t_MM, name_0veeC_t)
       call set_helicity_rep_0vbb_tensor(this, fq, pbra, pket)
     case(name_0vbb_ct)
       call set_helicity_rep_0vbb_contact(this, fq, pbra, pket)
@@ -319,29 +341,43 @@ contains
     end do
     deallocate(v)
   contains
+
     subroutine q_dependence_fermi()
       !
       !  h_f(q) / q ( q + Ec)
       !
       real(8) :: q
       integer :: i
-
       do i = 1, this%GetNMesh()
         q = fq%QMesh(i)
-        v(i) = neutrino_pot_fermi(q) / (q * (q+this%Ec))
+        v(i) = neutrino_pot_F_VV(q) / denominator(q)
       end do
     end subroutine q_dependence_fermi
 
-    function neutrino_pot_fermi(q) result(hf)
+    function neutrino_pot_F_VV(q) result(hf_VV)
       use MyLibrary, only: g_V
-      real(8), intent(in) :: q
-      real(8) :: hf
-      hf = 1.d0
-      if(this%ch_order<2)  return
+        real(8), intent(in) :: q
+        real(8) :: hf_VV
+        hf_VV = 1.d0
+        if(this%ch_order<2)  return
+        hf_VV = gv_func(q)**2 / g_V**2
+        if(this%ch_order>3) write(*,*) "Higher order is not implemented yet"
+    end function neutrino_pot_F_VV
 
-      hf = gv_func(q)**2 / g_V**2
-      if(this%ch_order>3) write(*,*) "Higher order is not implemented yet"
-    end function neutrino_pot_fermi
+    function denominator(q) result(denom)
+      use MyLibrary, only: m_proton, m_e
+      real(8), intent(in) :: q
+      real(8) :: denom
+      select case(this%OpRange)
+      case(long_range)
+        denom = q * (q + this%Ec)
+      case(short_range)
+         denom = m_proton*m_e/1000 ! factor of 1000 since m_e in keV
+      case default
+        write(*,*) "Invalid option for operator range. Value entered:", trim(this%OpRange)
+        stop
+      end select
+    end function denominator
   end subroutine set_helicity_rep_0vbb_fermi
 
   subroutine set_helicity_rep_0vbb_gt(this, fq, pbra, pket)
@@ -387,29 +423,107 @@ contains
             & helicity_expectation_value_sigma(-lam2_bra,-lam2_ket, i, m2)
       end do
       !if(this%Rank==0) r = r * (-1.d0) * sqrt(3.d0) ! s1 . s2 = -sqrt(3) [s1 s2]^0
-      if(this%OpName==name_0vbb_gt) r = r * (-1.d0) * sqrt(3.d0) ! s1 . s2 = -sqrt(3) [s1 s2]^0
+      if(this%OpName==name_0vbb_gt .or. this%OpName==name_0vbb_gt_AA .or. this%OpName==name_0vbb_gt_AP &
+         & .or. this%OpName==name_0vbb_gt_PP .or. this%OpName==name_0vbb_gt_MM) r = r * (-1.d0) * sqrt(3.d0) ! s1 . s2 = -sqrt(3) [s1 s2]^0
     end function sigma1_sigma2
 
     subroutine q_dependence_gt()
       real(8) :: q
       integer :: i
-      do i = 1, this%GetNMesh()
-        q = fq%QMesh(i)
-        v(i) = neutrino_pot_GT(q) / ( q * (q + this%Ec) )
-      end do
+      select case(this%OpName)
+      case(name_0vbb_gt,name_0veeC_gt0, name_0veeC_gt1, name_0veeC_gt2)
+        do i = 1, this%GetNMesh()
+          q = fq%QMesh(i)
+          v(i) = neutrino_pot_GT(q) / denominator(q)
+        end do
+      case(name_0vbb_gt_AA)
+        do i = 1, this%GetNMesh()
+          q = fq%QMesh(i)
+          v(i) = neutrino_pot_GT_AA(q) / denominator(q)
+        end do
+      case(name_0vbb_gt_AP)
+        do i = 1, this%GetNMesh()
+          q = fq%QMesh(i)
+          v(i) = neutrino_pot_GT_AP(q) / denominator(q)
+        end do
+      case(name_0vbb_gt_PP)
+        do i = 1, this%GetNMesh()
+          q = fq%QMesh(i)
+          v(i) = neutrino_pot_GT_PP(q) / denominator(q)
+        end do
+      case(name_0vbb_gt_MM)
+        do i = 1, this%GetNMesh()
+          q = fq%QMesh(i)
+          v(i) = neutrino_pot_GT_MM(q) / denominator(q)
+        end do
+      end select
     end subroutine q_dependence_gt
+
+    function neutrino_pot_GT_AA(q) result(hgt_AA)
+      use MyLibrary, only: g_A, m_nucleon
+      real(8), intent(in) :: q
+      real(8) :: hgt_AA
+      hgt_AA = 1.d0
+      if(this%ch_order<2) return
+      hgt_AA = ga_func(q)**2
+      hgt_AA = hgt_AA / g_A**2
+      if(this%ch_order>3) write(*,*) "Higher order is not implemented yet"
+    end function neutrino_pot_GT_AA
+
+    function neutrino_pot_GT_AP(q) result(hgt_AP)
+      use MyLibrary, only: g_A, m_nucleon
+      real(8), intent(in) :: q
+      real(8) :: hgt_AP
+      hgt_AP = 0
+      if(this%ch_order<2) return
+      hgt_AP = ga_func(q) * gp_func(q) * q**2 / (3.d0 * m_nucleon)
+      hgt_AP = hgt_AP / g_A**2
+      if(this%ch_order>3) write(*,*) "Higher order is not implemented yet"
+    end function neutrino_pot_GT_AP
+
+    function neutrino_pot_GT_PP(q) result(hgt_PP)
+      use MyLibrary, only: g_A, m_nucleon
+      real(8), intent(in) :: q
+      real(8) :: hgt_PP
+      hgt_PP = 0
+      if(this%ch_order<2) return
+      hgt_PP = gp_func(q)**2 * q**4 / (12.d0 * m_nucleon**2)
+      hgt_PP = hgt_PP / g_A**2
+      if(this%ch_order>3) write(*,*) "Higher order is not implemented yet"
+    end function neutrino_pot_GT_PP
+
+    function neutrino_pot_GT_MM(q) result(hgt_MM)
+      use MyLibrary, only: g_A, m_nucleon
+      real(8), intent(in) :: q
+      real(8) :: hgt_MM
+      hgt_MM = 0
+      if(this%ch_order<2) return
+      hgt_MM = gm_func(q)**2 * q**2 / (6.d0 * m_nucleon**2)
+      hgt_MM = hgt_MM / g_A**2
+      if(this%ch_order>3) write(*,*) "Higher order is not implemented yet"
+    end function neutrino_pot_GT_MM
 
     function neutrino_pot_GT(q) result(hgt)
       use MyLibrary, only: g_A, m_nucleon
       real(8), intent(in) :: q
       real(8) :: hgt
-      hgt = 1.d0
-      if(this%ch_order<2) return
-      hgt = ga_func(q)**2 + ga_func(q) * gp_func(q) * q**2 / (3.d0 * m_nucleon) + &
-          & gp_func(q)**2 * q**4 / (12.d0 * m_nucleon**2) + gm_func(q)**2 * q**2 / (6.d0 * m_nucleon**2)
-      hgt = hgt / g_A**2
-      if(this%ch_order>3) write(*,*) "Higher order is not implemented yet"
+      hgt = neutrino_pot_GT_AA(q)+neutrino_pot_GT_AP(q)+neutrino_pot_GT_PP(q)+neutrino_pot_GT_MM(q)
     end function neutrino_pot_GT
+
+    function denominator(q) result(denom)
+      use MyLibrary, only: m_proton, m_e
+      real(8), intent(in) :: q
+      real(8) :: denom
+      select case(this%OpRange)
+      case(long_range)
+        denom = q * (q + this%Ec)
+      case(short_range)
+        denom = m_proton*m_e/1000 ! factor of 1000 since m_e in keV
+      case default
+        write(*,*) "Invalid option for operator range. Value entered:", trim(this%OpRange)
+        stop
+      end select
+    end function denominator
   end subroutine set_helicity_rep_0vbb_gt
 
   subroutine set_helicity_rep_0vbb_tensor(this, fq, pbra, pket)
@@ -443,10 +557,28 @@ contains
     subroutine q_dependence_tensor()
       real(8) :: q
       integer :: i
-      do i = 1, this%GetNMesh()
-        q = fq%QMesh(i)
-        v(i) = neutrino_pot_T(q) / (q * (q+this%Ec))
-      end do
+      select case(this%OpName)
+      case(name_0vbb_t, name_0veeC_t)
+        do i = 1, this%GetNMesh()
+          q = fq%QMesh(i)
+          v(i) = neutrino_pot_T(q) / denominator(q)
+        end do
+      case(name_0vbb_t_AP)
+        do i = 1, this%GetNMesh()
+          q = fq%QMesh(i)
+          v(i) = neutrino_pot_T_AP(q) / denominator(q)
+        end do
+      case(name_0vbb_t_PP)
+        do i = 1, this%GetNMesh()
+          q = fq%QMesh(i)
+          v(i) = neutrino_pot_T_AP(q) / denominator(q)
+        end do
+      case(name_0vbb_t_MM)
+        do i = 1, this%GetNMesh()
+          q = fq%QMesh(i)
+          v(i) = neutrino_pot_T_MM(q) / denominator(q)
+        end do
+    end select
     end subroutine q_dependence_tensor
 
     function neutrino_pot_T(q) result(ht)
@@ -455,12 +587,60 @@ contains
       real(8) :: ht
       ht = - q**2 * (2.d0 * m_pi**2 + q**2) / (q**2 + m_pi**2)**2
       if(this%ch_order<2) return
-      ht = - gp_func(q) * ga_func(q) * q**2 / (3.d0*m_nucleon) - &
-          & gp_func(q)**2 * q**4 / (12.d0*m_nucleon**2) + &
-          & gm_func(q)**2 * q**2 / (12.d0*m_nucleon**2)
-      ht = ht / g_A**2 * (-1.d0) ! this -1 is from fourier trans r -> p space
+      ht = neutrino_pot_T_AP(q)+neutrino_pot_T_PP(q)+neutrino_pot_T_MM(q)
       if(this%ch_order>3) write(*,*) "Higher order is not implemented yet"
     end function neutrino_pot_T
+
+    function neutrino_pot_T_AP(q) result(ht_AP)
+      use MyLibrary, only: g_A, m_nucleon
+      real(8), intent(in) :: q
+      real(8) :: ht_AP
+      ht_AP = 0
+      if(this%ch_order<2) return
+      ht_AP = - ga_func(q) * gp_func(q) * q**2 / (3.d0 * m_nucleon)
+      ht_AP = ht_AP / g_A**2
+      ht_AP = ht_AP * (-1.d0) ! this -1 is from fourier trans r -> p space
+      if(this%ch_order>3) write(*,*) "Higher order is not implemented yet"
+    end function neutrino_pot_T_AP
+
+    function neutrino_pot_T_PP(q) result(ht_PP)
+      use MyLibrary, only: g_A, m_nucleon
+      real(8), intent(in) :: q
+      real(8) :: ht_PP
+      ht_PP = 0
+      if(this%ch_order<2) return
+      ht_PP = - gp_func(q)**2 * q**4 / (12.d0 * m_nucleon**2)
+      ht_PP = ht_PP / g_A**2
+      ht_PP = ht_PP * (-1.d0) ! this -1 is from fourier trans r -> p space
+      if(this%ch_order>3) write(*,*) "Higher order is not implemented yet"
+    end function neutrino_pot_T_PP
+
+    function neutrino_pot_T_MM(q) result(ht_MM)
+      use MyLibrary, only: g_A, m_nucleon
+      real(8), intent(in) :: q
+      real(8) :: ht_MM
+      ht_MM = 0
+      if(this%ch_order<2) return
+      ht_MM = gm_func(q)**2 * q**2 / (12.d0 * m_nucleon**2)
+      ht_MM = ht_MM / g_A**2
+      ht_MM = ht_MM * (-1.d0) ! this -1 is from fourier trans r -> p space
+      if(this%ch_order>3) write(*,*) "Higher order is not implemented yet"
+    end function neutrino_pot_T_MM
+
+    function denominator(q) result(denom)
+      use MyLibrary, only: m_proton, m_e
+      real(8), intent(in) :: q
+      real(8) :: denom
+      select case(this%OpRange)
+      case(long_range)
+        denom = q * (q + this%Ec)
+      case(short_range)
+        denom = m_proton*m_e/1000 ! factor of 1000 since m_e in keV
+      case default
+        write(*,*) "Invalid option for operator range. Value entered:", trim(this%OpRange)
+        stop
+      end select
+    end function denominator
   end subroutine set_helicity_rep_0vbb_tensor
 
   subroutine set_helicity_rep_0vbb_contact(this, fq, pbra, pket)
@@ -507,50 +687,4 @@ contains
     real(8) :: gp
     gp = -(2.d0 * m_nucleon * ga_func(q) ) / ( q**2 + m_pi**2 )
   end function gp_func
-
-  function neutrino_pot_GT_AA(q) result(hgt_AA)
-    use MyLibrary, only: g_A, m_nucleon
-    real(8), intent(in) :: q
-    real(8) :: hgt_AA
-    hgt_AP = 1.d0
-    if(this%ch_order<2) return
-    hgt_AA = ga_func(q)**2
-    hgt_AA = hgt_AA / g_A**2
-    if(this%ch_order>3) write(*,*) "Higher order is not implemented yet"
-  end function neutrino_pot_GT_AA
-
-  function neutrino_pot_GT_AP(q) result(hgt_AP)
-    use MyLibrary, only: g_A, m_nucleon
-    real(8), intent(in) :: q
-    real(8) :: hgt_AP
-    hgt_AP = 0
-    if(this%ch_order<2) return
-    hgt_AP = ga_func(q) * gp_func(q) * q**2 / (3.d0 * m_nucleon)
-    hgt_AP = hgt_AP / g_A**2
-    if(this%ch_order>3) write(*,*) "Higher order is not implemented yet"
-  end function neutrino_pot_GT_AP
-
-  function neutrino_pot_GT_PP(q) result(hgt_PP)
-    use MyLibrary, only: g_A, m_nucleon
-    real(8), intent(in) :: q
-    real(8) :: hgt_PP
-    hgt_PP = 0
-    if(this%ch_order<2) return
-    hgt_PP = gp_func(q)**2 * q**4 / (12.d0 * m_nucleon**2)
-    hgt_PP = hgt_PP / g_A**2
-    if(this%ch_order>3) write(*,*) "Higher order is not implemented yet"
-  end function neutrino_pot_GT_PP
-
-  function neutrino_pot_GT_MM(q) result(hgt_MM)
-    use MyLibrary, only: g_A, m_nucleon
-    real(8), intent(in) :: q
-    real(8) :: hgt_MM
-    hgt_PP = 0
-    if(this%ch_order<2) return
-    hgt_MM = gm_func(q)**2 * q**2 / (6.d0 * m_nucleon**2)
-    hgt_MM = hgt_MM / g_A**2
-    if(this%ch_order>3) write(*,*) "Higher order is not implemented yet"
-  end function neutrino_pot_GT_MM
-
-
 end module LeptonNumberViolation

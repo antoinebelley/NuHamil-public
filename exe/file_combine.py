@@ -95,7 +95,7 @@ def gen_script(params):
     os.chmod(fsh, 0o755)
     return fsh
 
-def main()
+def main():
     params = OrderedDict()
     set_input(params)
     fsh = gen_script(params)

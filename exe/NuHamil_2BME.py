@@ -10,7 +10,7 @@ from collections import OrderedDict
 import time
 
 HOME=os.path.expanduser("~")
-path_to_nninput = f"{HOME}/NuHamil/input_nn_files" # this is default; please modify here if you did not download the code in your home directory.
+path_to_nninput = f"{HOME}/Documents/TRIUMF/NuHamil-Public/input_nn_files" # this is default; please modify here if you did not download the code in your home directory.
 exe_file = 'NuHamil.exe'
 n_nodes=1               # Basically, you can use mpi, but if there is no NNrel file, it will stop. I recommend you to try without mpi for a first run.
 n_omp_threads=48        # threads per node
@@ -52,11 +52,14 @@ NNF = "N3LO_EM500"
 def set_input(params, hw=20, emax=14, e2max=28):
     params['rank'] = 2
     params['hw'] = hw
-    params['renorm'] = 'srg'
-    params['lambda'] = 2.0
+    params['renorm'] = 'bare'
+    # params['lambda'] = 2.0
+    # params['pmax2'] = 25
+    # params['Nmesh2'] = 500
     params['emax'] = emax
     params['e2max'] = e2max
     params['NNInt'] = NNF
+    params["Operators"] = '0vbbFermiVV_Ec_7.72_Range_SR-N2LO'
     params['input_nn_file'] = f"{path_to_nninput}/{params['NNInt']}_kmax8_N100_Jmax8.bin"
     set_file_name_nn(params)
 
@@ -119,7 +122,7 @@ def set_file_name_nn(params):
 def main():
     params = OrderedDict()
     for hw in [16]:
-        set_input(params,hw,emax=14,e2max=28)
+        set_input(params,hw,emax=4,e2max=8)
         fsh = gen_script(params, batch)
         if(batch == 'terminal' or batch == 'local'):
             cmd = "./" + fsh

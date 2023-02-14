@@ -85,7 +85,7 @@ contains
     integer :: ch_order, reg_pow, i
     logical :: meson_exchange
     real(8) :: Ec, lam, pv_couplings(11), pvtv_couplings(10)
-    type(str) :: OpName, op, regulator, op_string
+    type(str) :: OpName, op, regulator, op_string, OpRange
     type(str), allocatable :: par_names(:), par_vals(:)
     type(sys) :: s
 
@@ -97,8 +97,9 @@ contains
       Ec = 0.d0
       do i = 1, size(par_names)
         if(par_names(i)%val=="Ec") Ec = s%dbl(par_vals(i))
+        if(par_names(i)%val=="Range") OpRange = par_vals(i)
       end do
-      call lnv%init(op%val, NNint%val, rank=0, Ec=Ec, ch_order=ch_order, &
+      call lnv%init(op%val, NNint%val, OpRange=OpRange%val, rank=0, Ec=Ec, ch_order=ch_order, &
           & Jmax=max(this%chbra%GetJ(), this%chket%GetJ()), Regulator=regulator%val, RegulatorPower=reg_pow, RegulatorLambda=lam)
       call lnv%show_lnv_options()
       call inside(lnv)
@@ -327,7 +328,7 @@ contains
     integer :: ch_order, reg_pow, i
     logical :: meson_exchange
     real(8) :: Ec, lam, pv_couplings(11), pvtv_couplings(10)
-    type(str) :: OpName, op, regulator, op_string
+    type(str) :: OpName, op, regulator, op_string, OpRange
     type(str), allocatable :: par_names(:), par_vals(:)
     type(sys) :: s
 
@@ -339,8 +340,9 @@ contains
       Ec = 0.d0
       do i = 1, size(par_names)
         if(par_names(i)%val=="Ec") Ec = s%dbl(par_vals(i))
+        if(par_names(i)%val=="Range") OpRange = par_vals(i)
       end do
-      call lnv%init(op%val, NNint%val, rank=0, Ec=Ec, ch_order=ch_order, &
+      call lnv%init(op%val, NNint%val, OpRange=OpRange%val, rank=0, Ec=Ec, ch_order=ch_order, &
           & Jmax=this%ms%GetJmax(), Regulator=regulator%val, RegulatorPower=reg_pow, RegulatorLambda=lam)
       call lnv%show_lnv_options()
       call inside(lnv)
