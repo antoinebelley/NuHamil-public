@@ -52,15 +52,15 @@ NNF = "N3LO_EM500"
 def set_input(params, hw=20, emax=14, e2max=28):
     params['rank'] = 2
     params['hw'] = hw
-    params['renorm'] = 'bare'
-    # params['lambda'] = 2.0
+    params['renorm'] = 'srg'
+    params['lambda'] = 2.0
     # params['pmax2'] = 25
     # params['Nmesh2'] = 500
     params['emax'] = emax
     params['e2max'] = e2max
     params['NNInt'] = NNF
-    params["Operators"] = '0vbbFermiVV_Ec_7.72_Range_SR-N2LO'
-    params['input_nn_file'] = f"{path_to_nninput}/{params['NNInt']}_kmax8_N100_Jmax8.bin"
+    params["Operators"] = '0vbbFermiVV_Ec_7.72_Range_SR_-N2LO-Local3-500'
+    # params['input_nn_file'] = f"{path_to_nninput}/{params['NNInt']}_kmax8_N100_Jmax8.bin"
     set_file_name_nn(params)
 
 def get_script_name(params):

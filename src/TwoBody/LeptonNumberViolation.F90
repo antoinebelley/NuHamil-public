@@ -360,7 +360,7 @@ contains
         real(8) :: hf_VV
         hf_VV = 1.d0
         if(this%ch_order<2)  return
-        hf_VV = gv_func(q)**2 / g_V**2
+        hf_VV = gv_func(this, q)**2 / g_V**2
         if(this%ch_order>3) write(*,*) "Higher order is not implemented yet"
     end function neutrino_pot_F_VV
 
@@ -465,7 +465,7 @@ contains
       real(8) :: hgt_AA
       hgt_AA = 1.d0
       if(this%ch_order<2) return
-      hgt_AA = ga_func(q)**2
+      hgt_AA = ga_func(this, q)**2
       hgt_AA = hgt_AA / g_A**2
       if(this%ch_order>3) write(*,*) "Higher order is not implemented yet"
     end function neutrino_pot_GT_AA
@@ -476,7 +476,7 @@ contains
       real(8) :: hgt_AP
       hgt_AP = 0
       if(this%ch_order<2) return
-      hgt_AP = ga_func(q) * gp_func(q) * q**2 / (3.d0 * m_nucleon)
+      hgt_AP = ga_func(this, q) * gp_func(this, q) * q**2 / (3.d0 * m_nucleon)
       hgt_AP = hgt_AP / g_A**2
       if(this%ch_order>3) write(*,*) "Higher order is not implemented yet"
     end function neutrino_pot_GT_AP
@@ -487,7 +487,7 @@ contains
       real(8) :: hgt_PP
       hgt_PP = 0
       if(this%ch_order<2) return
-      hgt_PP = gp_func(q)**2 * q**4 / (12.d0 * m_nucleon**2)
+      hgt_PP = gp_func(this, q)**2 * q**4 / (12.d0 * m_nucleon**2)
       hgt_PP = hgt_PP / g_A**2
       if(this%ch_order>3) write(*,*) "Higher order is not implemented yet"
     end function neutrino_pot_GT_PP
@@ -498,7 +498,7 @@ contains
       real(8) :: hgt_MM
       hgt_MM = 0
       if(this%ch_order<2) return
-      hgt_MM = gm_func(q)**2 * q**2 / (6.d0 * m_nucleon**2)
+      hgt_MM = gm_func(this, q)**2 * q**2 / (6.d0 * m_nucleon**2)
       hgt_MM = hgt_MM / g_A**2
       if(this%ch_order>3) write(*,*) "Higher order is not implemented yet"
     end function neutrino_pot_GT_MM
@@ -597,7 +597,7 @@ contains
       real(8) :: ht_AP
       ht_AP = 0
       if(this%ch_order<2) return
-      ht_AP = - ga_func(q) * gp_func(q) * q**2 / (3.d0 * m_nucleon)
+      ht_AP = - ga_func(this, q) * gp_func(this, q) * q**2 / (3.d0 * m_nucleon)
       ht_AP = ht_AP / g_A**2
       ht_AP = ht_AP * (-1.d0) ! this -1 is from fourier trans r -> p space
       if(this%ch_order>3) write(*,*) "Higher order is not implemented yet"
@@ -609,7 +609,7 @@ contains
       real(8) :: ht_PP
       ht_PP = 0
       if(this%ch_order<2) return
-      ht_PP = - gp_func(q)**2 * q**4 / (12.d0 * m_nucleon**2)
+      ht_PP = - gp_func(this, q)**2 * q**4 / (12.d0 * m_nucleon**2)
       ht_PP = ht_PP / g_A**2
       ht_PP = ht_PP * (-1.d0) ! this -1 is from fourier trans r -> p space
       if(this%ch_order>3) write(*,*) "Higher order is not implemented yet"
@@ -621,7 +621,7 @@ contains
       real(8) :: ht_MM
       ht_MM = 0
       if(this%ch_order<2) return
-      ht_MM = gm_func(q)**2 * q**2 / (12.d0 * m_nucleon**2)
+      ht_MM = gm_func(this, q)**2 * q**2 / (12.d0 * m_nucleon**2)
       ht_MM = ht_MM / g_A**2
       ht_MM = ht_MM * (-1.d0) ! this -1 is from fourier trans r -> p space
       if(this%ch_order>3) write(*,*) "Higher order is not implemented yet"
@@ -660,31 +660,51 @@ contains
     end do
   end subroutine set_helicity_rep_0vbb_contact
 
-  function gv_func( q ) result(gv)
+  function gv_func(this, q ) result(gv)
     use MyLibrary, only: g_V
+    type(LNViolation), intent(in) :: this
     real(8), intent(in) :: q
     real(8) :: gv
-    gv = g_V / (1.d0 + q**2 / Lambda_V**2)**2
+    select case(this%OpRange)
+      case(long_range)
+        gv = g_V / (1.d0 + q**2 / Lambda_V**2)**2
+      case(short_range)
+        gv = g_V
+      case default
+        write(*,*) "Invalid option for operator range. Value entered:", trim(this%OpRange)
+        stop
+      end select
   end function gv_func
 
-  function ga_func( q ) result(ga)
+  function ga_func(this, q ) result(ga)
     use MyLibrary, only: g_A
+    type(LNViolation), intent(in) :: this
     real(8), intent(in) :: q
     real(8) :: ga
-    ga = g_A / (1.d0 + q**2 / Lambda_A**2)**2
+    select case(this%OpRange)
+      case(long_range)
+        ga = g_A / (1.d0 + q**2 / Lambda_A**2)**2
+      case(short_range)
+        ga = g_A
+      case default
+        write(*,*) "Invalid option for operator range. Value entered:", trim(this%OpRange)
+        stop
+      end select
   end function ga_func
 
-  function gm_func( q ) result(gm)
+  function gm_func(this, q ) result(gm)
     use MyLibrary, only: kappa=>gv
+    type(LNViolation), intent(in) :: this
     real(8), intent(in) :: q
     real(8) :: gm
-    gm = kappa * gv_func(q)
+    gm = kappa * gv_func(this, q)
   end function gm_func
 
-  function gp_func( q ) result(gp)
+  function gp_func(this, q ) result(gp)
     use MyLibrary, only: m_nucleon, m_pi
+    type(LNViolation), intent(in) :: this
     real(8), intent(in) :: q
     real(8) :: gp
-    gp = -(2.d0 * m_nucleon * ga_func(q) ) / ( q**2 + m_pi**2 )
+    gp = -(2.d0 * m_nucleon * ga_func(this, q) ) / ( q**2 + m_pi**2 )
   end function gp_func
 end module LeptonNumberViolation
